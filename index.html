@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>📚 蔵書管理</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#4a7c59">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="蔵書管理">
+<link rel="apple-touch-icon" href="icon-180.png">
+</head>
+<body>
+<header>
+  <h1>📚 蔵書管理</h1>
+  <nav>
+    <button class="tab-btn active" data-tab="shelf">本棚</button>
+    <button class="tab-btn" data-tab="profile">プロフィール</button>
+    <button class="tab-btn" data-tab="data">データ</button>
+  </nav>
+  <button id="ai-export-btn" class="accent-btn">🤖 AI用にエクスポート</button>
+</header>
+
+<main>
+  <!-- ===== 本棚タブ ===== -->
+  <section id="tab-shelf" class="tab-panel">
+    <div id="stats" class="stats-row"></div>
+
+    <div class="toolbar">
+      <input type="search" id="search-box" placeholder="タイトル・著者・タグで検索">
+      <select id="filter-status">
+        <option value="">すべての状態</option>
+        <option value="want">読みたい</option>
+        <option value="tsundoku">積読</option>
+        <option value="reading">読書中</option>
+        <option value="done">読了</option>
+        <option value="paused">中断</option>
+      </select>
+      <select id="filter-genre"><option value="">すべてのジャンル</option></select>
+      <select id="sort-order">
+        <option value="added_desc">登録が新しい順</option>
+        <option value="added_asc">登録が古い順</option>
+        <option value="title">タイトル順</option>
+        <option value="rating_desc">評価が高い順</option>
+        <option value="finished_desc">読了日が新しい順</option>
+      </select>
+      <button id="add-book-btn" class="primary-btn">＋ 本を追加</button>
+    </div>
+
+    <div id="book-list" class="book-grid"></div>
+    <p id="empty-message" class="empty" hidden>まだ本が登録されていません。「＋ 本を追加」から始めましょう。</p>
+  </section>
+
+  <!-- ===== プロフィールタブ ===== -->
+  <section id="tab-profile" class="tab-panel" hidden>
+    <p class="hint">ここに書いた内容は、AIにおすすめ本を聞くときのプロンプトに含まれます。自由に書いてください。</p>
+    <div class="profile-form">
+      <label>趣味・関心<textarea id="pf-interests" rows="3" placeholder="例：介護現場の業務改善、AI活用、ローコード開発、健康、歴史…"></textarea></label>
+      <label>好きなジャンル<textarea id="pf-genres" rows="2" placeholder="例：ビジネス書、SF、ノンフィクション…"></textarea></label>
+      <label>好きな作家・著者<textarea id="pf-authors" rows="2" placeholder="例：〇〇さんの本は全部読んでいる…"></textarea></label>
+      <label>読書の目的・目標<textarea id="pf-goal" rows="2" placeholder="例：月2冊読む。仕事に活かせる知識を増やしたい…"></textarea></label>
+      <label>その他メモ<textarea id="pf-note" rows="3" placeholder="例：長編よりも短めの本が好き。最近は紙より電子書籍…"></textarea></label>
+      <button id="save-profile-btn" class="primary-btn">プロフィールを保存</button>
+      <span id="profile-saved" class="saved-msg" hidden>✅ 保存しました</span>
+    </div>
+  </section>
+
+  <!-- ===== データタブ ===== -->
+  <section id="tab-data" class="tab-panel" hidden>
+    <p class="hint">データはこの端末（ブラウザ）の中だけに保存されます。バックアップや他の端末への引っ越しはここから行います。</p>
+
+    <div class="data-block">
+      <h2>📤 バックアップ（エクスポート）</h2>
+      <p class="hint">現在の蔵書とプロフィールをJSONとして書き出します。Mac版の <code>data/books.json</code> と同じ形式です。</p>
+      <div class="data-actions">
+        <button id="download-json-btn" class="primary-btn">📥 JSONファイルをダウンロード</button>
+        <button id="copy-json-btn">📋 JSONをコピー</button>
+      </div>
+    </div>
+
+    <div class="data-block">
+      <h2>📥 取り込み（インポート）</h2>
+      <p class="hint">JSONファイルを選ぶか、下の欄にJSONを貼り付けて「取り込む」を押してください。<strong>今のデータはすべて置き換わります。</strong></p>
+      <div class="data-actions">
+        <input type="file" id="import-file" accept=".json,application/json">
+      </div>
+      <textarea id="import-text" rows="6" placeholder='ここにJSONを貼り付け（例：{"books": [...], "profile": {...}}）'></textarea>
+      <div class="data-actions">
+        <button id="import-btn" class="primary-btn">取り込む</button>
+        <span id="import-msg" class="saved-msg" hidden></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== 本の追加/編集モーダル ===== -->
+<div id="book-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2 id="modal-title">本を追加</h2>
+    <form id="book-form">
+      <label>タイトル <span class="req">必須</span>
+        <input type="text" id="bf-title" required>
+      </label>
+      <div class="form-row">
+        <label>著者<input type="text" id="bf-author"></label>
+        <label>ジャンル<input type="text" id="bf-genre" list="genre-list"><datalist id="genre-list"></datalist></label>
+      </div>
+      <div class="form-row">
+        <label>状態
+          <select id="bf-status">
+            <option value="want">読みたい</option>
+            <option value="tsundoku">積読</option>
+            <option value="reading">読書中</option>
+            <option value="done">読了</option>
+            <option value="paused">中断</option>
+          </select>
+        </label>
+        <label>評価（読了時）
+          <div id="bf-rating" class="star-input" data-value="0">
+            <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+          </div>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>読み始めた日<input type="date" id="bf-started"></label>
+        <label>読み終えた日<input type="date" id="bf-finished"></label>
+      </div>
+      <label>タグ（カンマ区切り）<input type="text" id="bf-tags" placeholder="例：仕事, AI, 図書館で借りた"></label>
+      <label>メモ・感想<textarea id="bf-memo" rows="3"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" id="delete-book-btn" class="danger-btn" hidden>削除</button>
+        <span class="spacer"></span>
+        <button type="button" id="cancel-btn">キャンセル</button>
+        <button type="submit" class="primary-btn">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== AIエクスポートモーダル ===== -->
+<div id="export-modal" class="modal-overlay" hidden>
+  <div class="modal wide">
+    <h2>🤖 AI用プロンプト</h2>
+    <p class="hint">下の文章をコピーして、Claude や ChatGPT に貼り付けると「次に読む1冊」を提案してもらえます。</p>
+    <textarea id="export-text" rows="18" readonly></textarea>
+    <div class="modal-actions">
+      <span class="spacer"></span>
+      <button type="button" id="export-close-btn">閉じる</button>
+      <button type="button" id="copy-export-btn" class="primary-btn">📋 コピー</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

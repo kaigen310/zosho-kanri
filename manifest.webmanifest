@@ -1,0 +1,15 @@
+{
+  "name": "蔵書管理",
+  "short_name": "蔵書管理",
+  "description": "蔵書・読書状況をローカルで管理し、AIに次の1冊を聞くためのツール",
+  "lang": "ja",
+  "display": "standalone",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#f6f4ef",
+  "theme_color": "#4a7c59",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
